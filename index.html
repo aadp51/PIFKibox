@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PIF-Kibox Dashboard</title>
+  <meta name="description" content="Play Integrity Fix & Keybox Dashboard">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+  
+  <!-- Tailwind CSS & Lucide Icons CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    body {
+      background: linear-gradient(to bottom right, #0a0f14, #020406);
+      color: #f0f0f0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+    }
+    .tab-active {
+      background-color: #00f2ff;
+      color: black;
+      box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+    }
+    .tab-inactive {
+      color: #6272a4;
+    }
+    .tab-inactive:hover {
+      color: white;
+    }
+    .btn-active {
+      border-color: #00f2ff;
+      color: #00f2ff;
+      box-shadow: inset 0 0 10px rgba(0,242,255,0.1);
+    }
+    .btn-inactive {
+      border-color: rgba(255,255,255,0.1);
+      color: #6272a4;
+    }
+    .btn-inactive:hover {
+      border-color: rgba(255,255,255,0.3);
+      color: white;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body class="p-4 sm:p-6 flex flex-col items-center">
+  <header class="text-center mb-8 mt-4">
+    <h1 class="text-4xl md:text-5xl font-black uppercase italic tracking-tighter m-0">
+      Pixel<span class="text-[#00f2ff]">Integrity</span>
+    </h1>
+    <p class="text-[#6272a4] text-[10px] tracking-[0.2em] uppercase mt-2 font-bold">
+      Elite Device Integrity Hub
+    </p>
+  </header>
+
+  <!-- Tab Navigation -->
+  <div class="flex bg-white/5 p-1 rounded-2xl border border-white/10 mb-8 w-full max-w-md">
+    <button id="tab-pif" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold uppercase transition-all duration-300 tab-active" onclick="switchTab('pif')">
+      <i data-lucide="database" class="w-4 h-4"></i> PIF Database
+    </button>
+    <button id="tab-keybox" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold uppercase transition-all duration-300 tab-inactive" onclick="switchTab('keybox')">
+      <i data-lucide="zap" class="w-4 h-4"></i> Keybox Forge
+    </button>
+  </div>
+
+  <div class="w-full max-w-2xl space-y-6">
+    <!-- PIF Tab -->
+    <div id="content-pif" class="space-y-6">
+      <div id="pif-loading" class="text-center py-20 animate-pulse text-[#6272a4] font-bold uppercase tracking-widest">
+        Loading Database...
+      </div>
+      <div id="pif-container" class="space-y-6 hidden"></div>
+    </div>
+
+    <!-- Keybox Tab -->
+    <div id="content-keybox" class="space-y-6 hidden">
+      <div class="bg-white/5 border border-[#00f2ff]/10 backdrop-blur-md rounded-2xl p-6 shadow-lg">
+        <h2 class="text-[#00f2ff] text-sm font-extrabold uppercase flex items-center gap-2 mb-4">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i> Auto-Retrieval
+        </h2>
+        <div class="grid grid-cols-3 gap-3">
+          <button id="btn-tricky" onclick="fetchKeybox('tricky')" class="btn-inactive py-3 px-2 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300">
+            Tricky
+          </button>
+          <button id="btn-yurikey" onclick="fetchKeybox('yurikey')" class="btn-inactive py-3 px-2 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300">
+            Yurikey
+          </button>
+          <button id="btn-integrity" onclick="fetchKeybox('integrity')" class="btn-inactive py-3 px-2 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300">
+            Integrity
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white/5 border border-[#ff6b6b]/10 backdrop-blur-md rounded-2xl p-6 shadow-lg">
+        <h2 class="text-[#ff6b6b] text-sm font-extrabold uppercase flex items-center gap-2 mb-2">
+          <i data-lucide="shield" class="w-4 h-4"></i> Integrity Checker
+        </h2>
+        <p class="text-[#6272a4] text-xs mb-4">Cek status Integrity lewat jalur resmi Google Play Store:</p>
+        <a href="intent://details?id=com.google.android.play.games#Intent;scheme=market;package=com.android.vending;end" class="w-full flex items-center justify-center gap-2 py-3 bg-transparent border border-[#ff6b6b]/30 text-[#ff6b6b] rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-[#ff6b6b]/10 transition-all duration-300">
+          <i data-lucide="external-link" class="w-4 h-4"></i> Open Play Store Checker
+        </a>
+      </div>
+
+      <div id="download-section" class="hidden flex flex-col items-center justify-center mt-8 space-y-4">
+        <div id="status-msg" class="text-xs font-bold tracking-widest uppercase text-[#6272a4]"></div>
+        <a id="download-link" href="#" download="" class="w-full max-w-sm flex items-center justify-center gap-3 py-4 bg-[#00f2ff] text-black rounded-xl font-black uppercase tracking-widest shadow-[0_0_20px_rgba(0,242,255,0.4)] hover:scale-105 transition-all duration-300">
+          <i data-lucide="download" class="w-5 h-5"></i> <span id="download-name">DOWNLOAD.XML</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Utility functions
+    const hex = h => {
+      const matches = h.match(/../g);
+      if (!matches) return '';
+      return matches.map(b => String.fromCharCode(parseInt(b, 16))).join('');
+    };
+
+    const rot = s => s.replace(/[a-z]/gi, c =>
+      String.fromCharCode((c <= 'Z' ? 65 : 97) + (c.charCodeAt(0) - (c <= 'Z' ? 65 : 97) + 13) % 26)
+    );
+
+    const formatTime = ms => {
+      const min = Math.floor(ms / 60000);
+      const hr = Math.floor(min / 60);
+      const day = Math.floor(hr / 24);
+      if (min < 1) return 'Just now';
+      if (min < 60) return `${min}m ago`;
+      if (hr < 24) return `${hr}h ago`;
+      return `${day}${day === 1 ? ' day ago' : ' days ago'}`;
+    };
+
+    const sources = {
+      tricky: { r:'KOWX712/Tricky-Addon-Update-Target-List', b: 'keybox', p:'.extra', u: 'https://raw.githubusercontent.com/KOWX712/Tricky-Addon-Update-Target-List/refs/heads/keybox/.extra', n: 'tricky_addon.xml' },
+      yurikey: { r:'Yurii0307/yurikey', b: 'main', p:'key', u: 'https://raw.githubusercontent.com/Yurii0307/yurikey/main/key', n: 'yurikey.xml' },
+      integrity: { r:'MeowDump/MeowDump', b: 'main', p:'NullVoid/OptimusPrime', u: 'https://raw.githubusercontent.com/MeowDump/MeowDump/main/NullVoid/OptimusPrime', n: 'integritybox.xml' }
+    };
+
+    async function getUpdateInfo(repo, path, branch) {
+      try {
+        const res = await fetch(`https://api.github.com/repos/${repo}/commits?path=${path}&sha=${branch}&per_page=1`);
+        if (!res.ok) return 'Check Manual';
+        const data = await res.json();
+        if (data && data.length > 0) {
+          return formatTime(Date.now() - new Date(data[0].commit.committer.date).getTime());
+        }
+        return 'Unknown';
+      } catch {
+        return 'Unavailable';
+      }
+    }
+
+    // Tab Switching
+    function switchTab(tab) {
+      document.getElementById('tab-pif').className = `flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold uppercase transition-all duration-300 ${tab === 'pif' ? 'tab-active' : 'tab-inactive'}`;
+      document.getElementById('tab-keybox').className = `flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold uppercase transition-all duration-300 ${tab === 'keybox' ? 'tab-active' : 'tab-inactive'}`;
+      
+      document.getElementById('content-pif').classList.toggle('hidden', tab !== 'pif');
+      document.getElementById('content-keybox').classList.toggle('hidden', tab !== 'keybox');
+    }
+
+    // Fetch Database
+    async function loadDatabase() {
+      try {
+        const res = await fetch('database.json');
+        const data = await res.json();
+        renderDatabase(data);
+      } catch (err) {
+        console.error('Failed to load database:', err);
+        document.getElementById('pif-loading').innerText = 'Failed to load database.json';
+      }
+    }
+
+    function renderDatabase(dbData) {
+      const container = document.getElementById('pif-container');
+      const loading = document.getElementById('pif-loading');
+      
+      if (!dbData || !dbData.devices || !dbData.devices.google) return;
+      
+      let html = '';
+      for (const [codename, channels] of Object.entries(dbData.devices.google)) {
+        const title = channels.stable?.MODEL || channels.beta?.MODEL || codename;
+        
+        let channelsHtml = '';
+        for (const [channel, info] of Object.entries(channels)) {
+          const badgeClass = channel === 'stable' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400';
+          
+          channelsHtml += `
+            <div class="bg-black/20 border border-white/5 rounded-xl p-4 space-y-3">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${badgeClass}">
+                  ${channel}
+                </span>
+                <span class="text-[9px] text-[#6272a4] font-bold">${info.last_generated || ''}</span>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-y-2 text-[11px]">
+                <div class="flex items-center gap-1.5 text-[#6272a4]">
+                  <i data-lucide="hash" class="w-3 h-3"></i> Build: <span class="text-white font-bold">${info.BUILD_ID || ''}</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-[#6272a4]">
+                  <i data-lucide="calendar" class="w-3 h-3"></i> Patch: <span class="text-white font-bold">${info.SECURITY_PATCH || ''}</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-[#6272a4]">
+                  <i data-lucide="info" class="w-3 h-3"></i> OS: <span class="text-white font-bold">${info.RELEASE || ''}</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-[#6272a4]">
+                  <i data-lucide="cpu" class="w-3 h-3"></i> SDK: <span class="text-white font-bold">${info.SDK_INT || ''}</span>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-2 pt-2">
+                <a href="${info.pif_url || '#'}" target="_blank" rel="noreferrer" class="flex items-center justify-center gap-2 py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold uppercase hover:border-[#00f2ff] hover:text-[#00f2ff] transition-all">
+                  <i data-lucide="download" class="w-3.5 h-3.5"></i> PIF JSON
+                </a>
+                <div class="flex gap-2">
+                  <a href="${info.boot_img || '#'}" class="flex-1 flex items-center justify-center gap-2 py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold uppercase hover:border-[#00f2ff] hover:text-[#00f2ff] transition-all">
+                    <i data-lucide="zap" class="w-3.5 h-3.5"></i> Boot
+                  </a>
+                  <a href="${info.init_boot_img || '#'}" class="flex-1 flex items-center justify-center gap-2 py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold uppercase hover:border-[#00f2ff] hover:text-[#00f2ff] transition-all">
+                    <i data-lucide="zap" class="w-3.5 h-3.5"></i> Init
+                  </a>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        html += `
+          <div class="bg-white/5 border border-[#00f2ff]/10 backdrop-blur-md rounded-2xl overflow-hidden shadow-lg">
+            <div class="bg-[#00f2ff]/5 p-4 border-b border-[#00f2ff]/10 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="bg-[#00f2ff] p-2 rounded-lg text-black">
+                  <i data-lucide="smartphone" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h3 class="text-lg font-black uppercase italic tracking-tight leading-none">
+                    ${title}
+                  </h3>
+                  <span class="text-[10px] text-[#6272a4] font-bold uppercase tracking-widest">${codename}</span>
+                </div>
+              </div>
+            </div>
+            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              ${channelsHtml}
+            </div>
+          </div>
+        `;
+      }
+      
+      container.innerHTML = html;
+      loading.classList.add('hidden');
+      container.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    // Fetch Keybox
+    async function fetchKeybox(type) {
+      // Reset buttons
+      ['tricky', 'yurikey', 'integrity'].forEach(t => {
+        document.getElementById(`btn-${t}`).className = `py-3 px-2 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300 ${t === type ? 'btn-active' : 'btn-inactive'}`;
+      });
+
+      const dlSection = document.getElementById('download-section');
+      const statusMsg = document.getElementById('status-msg');
+      const dlLink = document.getElementById('download-link');
+      const dlName = document.getElementById('download-name');
+      
+      dlSection.classList.remove('hidden');
+      statusMsg.innerHTML = '<span class="animate-pulse">FETCHING...</span>';
+      dlLink.classList.add('hidden');
+
+      try {
+        const source = sources[type];
+        const res = await fetch(source.u);
+        if (!res.ok) throw new Error('Failed to fetch');
+        let raw = await res.text();
+        let final = '';
+        
+        const lastUpdate = await getUpdateInfo(source.r, source.p, source.b);
+        
+        if (type === 'tricky') {
+          final = atob(hex(raw.replace(/\s+/g, '')));
+        } else if (type === 'yurikey') {
+          final = atob(raw.trim());
+        } else if (type === 'integrity') {
+          let d = raw.trim();
+          for (let i = 0; i < 10; i++) {
+            d = atob(d.replace(/\s/g, ''));
+          }
+          final = rot(hex(d));
+          ["every", "soul", "will", "taste", "death"].forEach(w => {
+            final = final.split(w).join("");
+          });
+        }
+        
+        final = final.split('algorithm="@Yurii0307"').join('algorithm="rsa"');
+        final = final.replace(/\n\s*\n/g, "\n");
+        
+        const blob = new Blob([final], { type: 'text/xml' });
+        const url = URL.createObjectURL(blob);
+        
+        dlLink.href = url;
+        dlLink.download = source.n;
+        dlName.innerText = source.n;
+        
+        statusMsg.innerHTML = `SOURCE UPDATE: <strong class="text-[#00f2ff]">${lastUpdate}</strong>`;
+        dlLink.classList.remove('hidden');
+      } catch (e) {
+        console.error(e);
+        statusMsg.innerHTML = '<span class="text-[#ff6b6b] font-bold">X FETCH FAILED X</span>';
+      }
+    }
+
+    // Init
+    loadDatabase();
+  </script>
+</body>
+  </html>
