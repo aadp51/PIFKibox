@@ -21,10 +21,10 @@
           "RELEASE": "16",
           "SDK_INT": "36",
           "SECURITY_PATCH": "2026-03-05",
-          "last_generated": "01-04-2026 21:36:01",
+          "last_generated": "01-04-2026 21:54:18",
           "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/blazer/blazer_stable.json",
-          "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer/boot.img",
-          "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer/init_boot.img"
+          "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer-stable/boot.img",
+          "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer-stable/init_boot.img"
         }
       }
     }
