@@ -1,0 +1,20 @@
+{
+  "devices": {
+    "google": {
+      "blazer": {
+        "beta": {
+          "status": "up_to_date",
+          "MODEL": "Pixel 10 Pro",
+          "BUILD_ID": "CP21.260306.017",
+          "RELEASE": "17",
+          "SDK_INT": "35",
+          "SECURITY_PATCH": "2026-03-05",
+          "last_generated": "01-04-2026 21:17:22",
+          "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/blazer/blazer_beta.json",
+          "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer/boot.img",
+          "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer/init_boot.img"
+        }
+      }
+    }
+  }
+}
