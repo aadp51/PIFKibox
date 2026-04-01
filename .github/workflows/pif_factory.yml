@@ -195,9 +195,8 @@ jobs:
           
           TIMESTAMP=$(date +'%d-%m-%Y %H:%M:%S')
           PIF_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/$DIR/$FILE_NAME"
-          BOOT_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.codename }}/boot.img"
-          INIT_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.codename }}/init_boot.img"
-
+          BOOT_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.codename }}-${{ github.event.inputs.channel }}/boot.img"
+          INIT_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.codename }}-${{ github.event.inputs.channel }}/init_boot.img"
           jq --arg codename "${{ github.event.inputs.codename }}" \
              --arg channel "${{ github.event.inputs.channel }}" \
              --arg model "$MODEL" \
@@ -229,20 +228,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="${{ github.event.inputs.codename }}"
+          # TAG-nya digabung sama channel (contoh: blazer-stable atau blazer-beta)
+          TAG="${{ github.event.inputs.codename }}-${{ github.event.inputs.channel }}"
           printf -v NOTES "ID : %s\n%s %s" "${{ env.BID }}" "${{ env.MARKET_NAME }}" "${{ github.event.inputs.channel }}"
           
           # Check if release exists, if not create it. If it exists, update the notes.
           if gh release view "$TAG"; then
             gh release edit "$TAG" --notes "$NOTES"
           else
-            gh release create "$TAG" --title "${{ env.MARKET_NAME }} | ${{ github.event.inputs.codename }}" --notes "$NOTES"
+            # Judul release-nya juga ditambahin channel biar jelas
+            gh release create "$TAG" --title "${{ env.MARKET_NAME }} | ${{ github.event.inputs.codename }} (${{ github.event.inputs.channel }})" --notes "$NOTES"
           fi
           
           # Upload with --clobber to overwrite. Remove channel from filename to make it pure.
           [ -f "output/boot.img" ] && gh release upload "$TAG" "output/boot.img#boot.img" --clobber
           [ -f "output/init_boot.img" ] && gh release upload "$TAG" "output/init_boot.img#init_boot.img" --clobber
-
+          
       - name: 💾 Commit & Push Changes
         run: |
           git config --global user.name "PIF-Bot"
