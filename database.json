@@ -17,11 +17,11 @@
         "stable": {
           "status": "up_to_date",
           "MODEL": "Pixel 10 Pro",
-          "BUILD_ID": "CP1A.260305.018",
+          "BUILD_ID": "CP1A.260405.005",
           "RELEASE": "16",
           "SDK_INT": "36",
-          "SECURITY_PATCH": "2026-03-05",
-          "last_generated": "01-04-2026 21:54:18",
+          "SECURITY_PATCH": "2026-04-05",
+          "last_generated": "08-04-2026 12:11:20",
           "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/blazer/blazer_stable.json",
           "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer-stable/boot.img",
           "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer-stable/init_boot.img"
