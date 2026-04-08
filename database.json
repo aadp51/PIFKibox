@@ -26,6 +26,20 @@
           "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer-stable/boot.img",
           "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer-stable/init_boot.img"
         }
+      },
+      "caiman": {
+        "beta": {
+          "status": "up_to_date",
+          "MODEL": "Pixel 9 Pro",
+          "BUILD_ID": "CP21.260306.017",
+          "RELEASE": "17",
+          "SDK_INT": "35",
+          "SECURITY_PATCH": "2026-03-05",
+          "last_generated": "08-04-2026 13:51:53",
+          "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/caiman/caiman_beta.json",
+          "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/caiman-beta/boot.img",
+          "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/caiman-beta/init_boot.img"
+        }
       }
     }
   }
