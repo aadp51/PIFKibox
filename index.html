@@ -81,17 +81,6 @@
         <h2 class="text-[#00f2ff] text-sm font-extrabold uppercase flex items-center gap-2 mb-4">
           <i data-lucide="refresh-cw" class="w-4 h-4"></i> Auto-Retrieval
         </h2>
-
-      <div class="bg-white/5 border border-[#ff6b6b]/10 backdrop-blur-md rounded-2xl p-6 shadow-lg">
-        <h2 class="text-[#ff6b6b] text-sm font-extrabold uppercase flex items-center gap-2 mb-2">
-          <i data-lucide="shield" class="w-4 h-4"></i> Integrity Checker
-        </h2>
-        <p class="text-[#6272a4] text-xs mb-4">Cek status Integrity lewat jalur Developer Options Play Store:</p>
-        <a href="intent:#Intent;action=com.google.android.gms.PLAY_INTEGRITY_CHECK;package=com.android.vending;end" class="w-full flex items-center justify-center gap-2 py-3 bg-transparent border border-[#ff6b6b]/30 text-[#ff6b6b] rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-[#ff6b6b]/10 transition-all duration-300">
-          <i data-lucide="external-link" class="w-4 h-4"></i> Open Integrity Checker
-        </a>
-      </div>
-        
         <div class="grid grid-cols-3 gap-3">
           <button id="btn-tricky" onclick="fetchKeybox('tricky')" class="btn-inactive py-3 px-2 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300">
             Tricky
@@ -149,7 +138,7 @@
       try {
         const res = await fetch(`https://api.github.com/repos/${repo}/commits?path=${path}&sha=${branch}&per_page=1`);
         if (!res.ok) return 'Check Manual';
-        const data = await es.json();
+        const data = await res.json();
         if (data && data.length > 0) {
           return formatTime(Date.now() - new Date(data[0].commit.committer.date).getTime());
         }
