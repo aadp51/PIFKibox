@@ -5,11 +5,11 @@
         "beta": {
           "status": "up_to_date",
           "MODEL": "Pixel 10 Pro",
-          "BUILD_ID": "CP21.260306.017",
+          "BUILD_ID": "CP21.260330.008",
           "RELEASE": "17",
           "SDK_INT": "35",
-          "SECURITY_PATCH": "2026-03-05",
-          "last_generated": "13-04-2026 13:08:04",
+          "SECURITY_PATCH": "2026-04-05",
+          "last_generated": "17-04-2026 18:02:27",
           "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/blazer/blazer_beta.json",
           "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer-beta/boot.img",
           "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer-beta/init_boot.img"
@@ -21,7 +21,7 @@
           "RELEASE": "16",
           "SDK_INT": "36",
           "SECURITY_PATCH": "2026-04-05",
-          "last_generated": "17-04-2026 16:54:19",
+          "last_generated": "17-04-2026 17:59:35",
           "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/blazer/blazer_stable.json",
           "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer-stable/boot.img",
           "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/blazer-stable/init_boot.img"
