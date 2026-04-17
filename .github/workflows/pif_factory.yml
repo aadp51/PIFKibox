@@ -193,21 +193,32 @@ jobs:
             mkdir -p "$DIR"
             FILE_NAME="${{ github.event.inputs.codename }}_${CHANNEL}.json"
             
-            cat <<EOF > "$DIR/$FILE_NAME"
-            {
-              "ID": "$ID",
-              "BRAND": "$BRAND",
-              "DEVICE": "${{ github.event.inputs.codename }}",
-              "FINGERPRINT": "$FP",
-              "MANUFACTURER": "$MANUFACTURER",
-              "MODEL": "$MODEL",
-              "PRODUCT": "$PRODUCT",
-              "SECURITY_PATCH": "$PATCH",
-              "DEVICE_INITIAL_SDK_INT": "$INITIAL_SDK",
-              "RELEASE": "$REL",
-              "SDK_INT": "$SDK_INT"
-            }
-EOF
+            # Ganti cat EOF pakai jq biar aman dari error indentasi YAML
+            jq -n \
+              --arg id "$ID" \
+              --arg brand "$BRAND" \
+              --arg device "${{ github.event.inputs.codename }}" \
+              --arg fp "$FP" \
+              --arg manu "$MANUFACTURER" \
+              --arg model "$MODEL" \
+              --arg prod "$PRODUCT" \
+              --arg patch "$PATCH" \
+              --arg initsdk "$INITIAL_SDK" \
+              --arg rel "$REL" \
+              --arg sdk "$SDK_INT" \
+              '{
+                "ID": $id,
+                "BRAND": $brand,
+                "DEVICE": $device,
+                "FINGERPRINT": $fp,
+                "MANUFACTURER": $manu,
+                "MODEL": $model,
+                "PRODUCT": $prod,
+                "SECURITY_PATCH": $patch,
+                "DEVICE_INITIAL_SDK_INT": $initsdk,
+                "RELEASE": $rel,
+                "SDK_INT": $sdk
+              }' > "$DIR/$FILE_NAME"
 
             DB="database.json"
             if [ ! -f "$DB" ]; then echo '{"devices":{"google":{}}}' > "$DB"; fi
