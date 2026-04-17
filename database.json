@@ -35,7 +35,7 @@
           "RELEASE": "17",
           "SDK_INT": "35",
           "SECURITY_PATCH": "2026-04-05",
-          "last_generated": "17-04-2026 17:00:07",
+          "last_generated": "17-04-2026 18:11:04",
           "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/caiman/caiman_beta.json",
           "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/caiman-beta/boot.img",
           "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/caiman-beta/init_boot.img"
@@ -47,7 +47,7 @@
           "RELEASE": "16",
           "SDK_INT": "36",
           "SECURITY_PATCH": "2026-04-05",
-          "last_generated": "10-04-2026 12:54:10",
+          "last_generated": "17-04-2026 18:08:19",
           "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/caiman/caiman_stable.json",
           "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/caiman-stable/boot.img",
           "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/caiman-stable/init_boot.img"
