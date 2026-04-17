@@ -31,11 +31,11 @@
         "beta": {
           "status": "up_to_date",
           "MODEL": "Pixel 9 Pro",
-          "BUILD_ID": "CP21.260306.017",
+          "BUILD_ID": "CP21.260330.008",
           "RELEASE": "17",
           "SDK_INT": "35",
-          "SECURITY_PATCH": "2026-03-05",
-          "last_generated": "08-04-2026 13:51:53",
+          "SECURITY_PATCH": "2026-04-05",
+          "last_generated": "17-04-2026 17:00:07",
           "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/caiman/caiman_beta.json",
           "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/caiman-beta/boot.img",
           "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/caiman-beta/init_boot.img"

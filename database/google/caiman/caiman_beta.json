@@ -1,12 +1,12 @@
 {
-  "ID": "CP21.260306.017",
+  "ID": "CP21.260330.008",
   "BRAND": "google",
   "DEVICE": "caiman",
-  "FINGERPRINT": "google/caiman_beta/caiman:17/CP21.260306.017/15063635:user/release-keys",
+  "FINGERPRINT": "google/caiman_beta/caiman:17/CP21.260330.008/15199860:user/release-keys",
   "MANUFACTURER": "Google",
   "MODEL": "Pixel 9 Pro",
   "PRODUCT": "caiman_beta",
-  "SECURITY_PATCH": "2026-03-05",
+  "SECURITY_PATCH": "2026-04-05",
   "DEVICE_INITIAL_SDK_INT": "34",
   "RELEASE": "17",
   "SDK_INT": "35"
