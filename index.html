@@ -331,10 +331,6 @@
         
         final = final.split('algorithm="@Yurii0307"').join('algorithm="rsa"');
         final = final.replace(/\n\s*\n/g, "\n");
-        final = final.replace(/<(Certificate|PrivateKey)[^>]*>([\s\S]*?)<\/\1>/g, (match, tag, content) => {
-          const cleanedContent = content.split('\n').map(line => line.trim()).filter(line => line !== '').join('\n');
-          return `<${tag} format="pem">\n${cleanedContent}\n</${tag}>`;
-        });
         
         const blob = new Blob([final], { type: 'text/xml' });
         const url = URL.createObjectURL(blob);
