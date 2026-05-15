@@ -6,7 +6,7 @@ on:
       codename:
         description: 'Codename (marble, garnet, dll)'
         required: true
-        default: 'marble'
+        default: 'sapphiren'
       region:
         description: 'Region (Global, Indonesia, EEA, China, dll)'
         required: true
