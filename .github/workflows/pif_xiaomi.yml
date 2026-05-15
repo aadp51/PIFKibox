@@ -41,18 +41,12 @@ jobs:
               gh api -X DELETE repos/${{ github.repository }}/actions/runs/$run_id --silent || true
             fi
           done
-
+          
       - name: 🛠️ Setup Environment
         run: |
           sudo apt update
-          sudo apt install -y aria2 p7zip-full p7zip-rar python3-pip wget curl jq unzip
+          sudo apt install -y aria2 p7zip-full p7zip-rar python3-pip wget curl jq unzip erofs-utils
           pip3 install --break-system-packages payload-dumper
-          wget https://git.kernel.org/pub/scm/linux/kernel/git/xiang/erofs-utils.git/snapshot/erofs-utils-1.9.1.tar.gz
-          tar -xzvf erofs-utils-1.9.1.tar.gz
-          cd erofs-utils-1.9.1
-          ./configure && make
-          sudo make install
-          cd ..
           npm install yaml-js
 
       - name: 🎣 Scrape / Resolve Link (XiaomiFirmwareUpdater)
