@@ -39,62 +39,82 @@ jobs:
           sudo apt update
           sudo apt install -y aria2 p7zip-full p7zip-rar python3-pip wget curl jq unzip erofs-utils
           pip3 install --break-system-packages payload-dumper
-          npm install js-yaml
 
-      - name: 🎣 Scrape / Resolve Link (XiaomiFirmwareUpdater Official)
+      - name: 📥 Fetch Xiaomi Data (Pure YQ)
+        run: |
+          echo "⬇️ Mengunduh database XiaomiFirmwareUpdater..."
+          wget -qO latest.yml https://raw.githubusercontent.com/XiaomiFirmwareUpdater/miui-updates-tracker/master/data/latest.yml
+          echo "🔄 Konversi YAML ke JSON untuk di-parse Script..."
+          yq -o=json latest.yml > latest.json
+
+      - name: 🎣 Scrape / Resolve Link (MIUI Region Code Matcher)
         id: scraper
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const yaml = require('js-yaml');
             const codename = '${{ github.event.inputs.codename }}'.toLowerCase();
             const regionInput = '${{ github.event.inputs.region }}'.toLowerCase();
             const rom_url = '${{ github.event.inputs.rom_url }}';
 
+            // Jika link manual diisi, langsung bypass
             if (rom_url) {
               const results = { xiaomi: { title: `${codename.toUpperCase()} Manual`, version: 'Manual', link: rom_url } };
               fs.writeFileSync('scrape_results.json', JSON.stringify(results));
               return;
             }
 
-            // Fetch official latest.yml
-            const url = 'https://raw.githubusercontent.com/XiaomiFirmwareUpdater/miui-updates-tracker/master/data/latest.yml';
-            const response = await fetch(url);
-            const text = await response.text();
-            const data = yaml.load(text);
+            const data = JSON.parse(fs.readFileSync('latest.json', 'utf8'));
 
-            // Map untuk mencocokkan region input dengan field "name" di YAML
-            const regionKeywords = {
-              'global': ['global', 'international', ' mi '],
-              'indonesia': ['indonesia', ' id '],
-              'eea': ['eea', 'europe', ' eu '],
-              'china': ['china', ' cn '],
-              'india': ['india', ' in ']
+            // Mapping Kode Region Absolut Xiaomi (Tidak mungkin meleset)
+            const regionCodes = {
+              'global': 'MIXM',
+              'indonesia': 'IDXM',
+              'eea': 'EUXM',
+              'china': 'CNXM',
+              'india': 'INXM',
+              'russia': 'RUXM',
+              'turkey': 'TRXM',
+              'taiwan': 'TWXM'
             };
 
-            const keywords = regionKeywords[regionInput] || [regionInput];
+            const targetCode = regionCodes[regionInput];
             let found = null;
+            let fallback = null; // Penyelamat jika region benar-benar kosong
 
             for (const item of data) {
-              // Cek codename dan pastikan method adalah recovery
+              // Pastikan codename cocok dan berformat recovery .zip
               if (item.codename && item.codename.toLowerCase() === codename && 
                   item.method && item.method.toLowerCase() === 'recovery') {
                 
-                const itemName = (item.name || "").toLowerCase();
-                // Jika keyword region cocok
-                if (keywords.some(k => itemName.includes(k))) {
+                const version = (item.version || "").toUpperCase();
+                const name = (item.name || "").toLowerCase();
+
+                // PRIORITAS 1: Cek Kode Region di versi OS (Paling Akurat)
+                if (targetCode && version.includes(targetCode)) {
                   found = { title: item.name, version: item.version, link: item.link };
-                  break; 
+                  break;
                 }
+                
+                // PRIORITAS 2: Cek di nama produk (Cadangan)
+                if (name.includes(regionInput) || (regionInput === 'global' && name.includes(' mi '))) {
+                  found = { title: item.name, version: item.version, link: item.link };
+                  break;
+                }
+
+                // Ambil ROM pertama yang ketemu sebagai fallback agar workflow tidak mati error
+                if (!fallback) fallback = { title: item.name, version: item.version, link: item.link };
               }
             }
 
-            if (found) {
-              fs.writeFileSync('scrape_results.json', JSON.stringify({ xiaomi: found }));
-              console.log("✅ Match Found:", found.title, found.link);
+            const finalTarget = found || fallback;
+
+            if (finalTarget) {
+              fs.writeFileSync('scrape_results.json', JSON.stringify({ xiaomi: finalTarget }));
+              console.log("✅ DITEMUKAN:", finalTarget.title, " | Versi OS:", finalTarget.version);
+              if (!found) console.log("⚠️ Menggunakan ROM alternatif karena region spesifik tidak tersedia di tracker.");
             } else {
-              core.setFailed(`❌ Gagal menemukan ROM Recovery untuk ${codename} region ${regionInput}.`);
+              core.setFailed(`❌ Gagal: Perangkat dengan codename '${codename}' tidak ditemukan sama sekali di database.`);
             }
 
       - name: ⚙️ Process ROM
@@ -110,7 +130,7 @@ jobs:
           aria2c -x 16 -s 16 -j 16 -k 1M -o rom.zip "$ROM_URL"
           
           echo "📦 Extracting Payload..."
-          unzip rom.zip payload.bin || { echo "Bukan format payload.bin"; exit 1; }
+          unzip rom.zip payload.bin || { echo "❌ Format ROM tidak didukung (bukan payload.bin)"; exit 1; }
           payload_dumper --partitions system,product,vendor,system_ext,boot,init_boot payload.bin
           
           mkdir -p extracted
