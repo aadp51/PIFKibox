@@ -84,7 +84,8 @@ jobs:
 
             for (const item of data) {
               // Pastikan codename cocok dan berformat recovery .zip
-              if (item.codename && item.codename.toLowerCase() === codename && 
+              const itemCodename = (item.codename || "").toLowerCase();
+              if (itemCodename && (itemCodename === codename || itemCodename.startsWith(codename + "_")) &&
                   item.method && item.method.toLowerCase() === 'recovery') {
                 
                 const version = (item.version || "").toUpperCase();
