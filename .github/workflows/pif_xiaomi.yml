@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       codename:
-        description: 'Codename (marble, garnet, dll)'
+        description: 'Codename (contoh: sapphiren, marble, dll)'
         required: true
         default: 'sapphiren'
       region:
@@ -12,7 +12,7 @@ on:
         required: true
         default: 'Global'
       rom_url:
-        description: 'Direct Link .zip (Optional - Override Scraper)'
+        description: 'Direct Link .zip (Optional)'
         required: false
         default: ''
 
@@ -29,27 +29,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🧹 Deep Cleanup (Anti-Sampah)
+      - name: 🧹 Deep Cleanup
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
           sudo apt-get clean
-          RUNS=$(gh api repos/${{ github.repository }}/actions/runs --paginate -q '.workflow_runs[].id' || echo "")
-          for run_id in $RUNS; do
-            if [ "$run_id" != "${{ github.run_id }}" ] && [ -n "$run_id" ]; then
-              gh api -X DELETE repos/${{ github.repository }}/actions/runs/$run_id --silent || true
-            fi
-          done
-          
+
       - name: 🛠️ Setup Environment
         run: |
           sudo apt update
+          # Menggunakan erofs-utils dari apt agar tidak perlu kompilasi manual yang sering error
           sudo apt install -y aria2 p7zip-full p7zip-rar python3-pip wget curl jq unzip erofs-utils
           pip3 install --break-system-packages payload-dumper
           npm install yaml-js
 
-      - name: 🎣 Scrape / Resolve Link (XiaomiFirmwareUpdater)
+      - name: 🎣 Scrape / Resolve Link
         id: scraper
         uses: actions/github-script@v7
         with:
@@ -62,197 +57,121 @@ jobs:
 
             let results = {};
 
-            // Kalau input manual URL diisi, skip scraping
             if (rom_url) {
-              results['xiaomi'] = { title: `${codename.toUpperCase()} ${region.toUpperCase()}`, version: 'Manual', link: rom_url };
+              results['xiaomi'] = { title: `${codename.toUpperCase()} Manual`, version: 'Manual', link: rom_url };
               fs.writeFileSync('scrape_results.json', JSON.stringify(results));
               return;
             }
 
-            // Scrape dari latest.yml
-            const url = 'https://raw.githubusercontent.com/XiaomiFirmwareUpdater/miui-updates-tracker/refs/heads/master/data/latest.yml';
+            // Mengambil data terbaru dari master branch
+            const url = 'https://raw.githubusercontent.com/XiaomiFirmwareUpdater/miui-updates-tracker/master/data/latest.yml';
             const response = await fetch(url);
             const text = await response.text();
             const data = yaml.load(text);
 
             let found = null;
             for (const item of data) {
-              if (
-                item.codename && item.codename.toLowerCase() === codename &&
-                item.method && item.method.toLowerCase() === 'recovery' &&
-                item.name && item.name.toLowerCase().includes(region)
-              ) {
-                found = {
-                  title: item.name,
-                  version: item.version,
-                  link: item.link
-                };
-                break; // Ambil yang pertama ketemu (biasanya paling atas/baru)
+              // Logika pencarian yang lebih kuat: cek codename DAN pastikan metode adalah recovery
+              if (item.codename && item.codename.toLowerCase() === codename && 
+                  item.method && item.method.toLowerCase() === 'recovery') {
+                
+                const itemName = item.name.toLowerCase();
+                // Cek apakah nama mengandung region yang diminta
+                if (itemName.includes(region)) {
+                  found = {
+                    title: item.name,
+                    version: item.version,
+                    link: item.link
+                  };
+                  break;
+                }
               }
             }
 
             if (found) {
               results['xiaomi'] = found;
               fs.writeFileSync('scrape_results.json', JSON.stringify(results));
-              console.log("Scrape Results:", JSON.stringify(results, null, 2));
+              console.log("Found:", found);
             } else {
-              core.setFailed(`❌ Link ROM tidak ditemukan untuk codename ${codename} region ${region}`);
+              core.setFailed(`❌ ROM tidak ditemukan untuk ${codename} region ${region}. Pastikan nama region benar (contoh: Global, Indonesia, EEA).`);
             }
 
-      - name: ⚙️ Process ROM (Download, Extract, PIF, Release)
+      - name: ⚙️ Process ROM
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ ! -f scrape_results.json ]; then
-            echo "❌ Hasil scrape tidak ditemukan, aborting."
-            # We use an alternative to exit 1 to not break the tool
-            false
-          fi
+          if [ ! -f scrape_results.json ]; then exit 1; fi
 
           ROM_URL=$(jq -r '.xiaomi.link' scrape_results.json)
           MARKET_NAME=$(jq -r '.xiaomi.title' scrape_results.json)
           VERSION=$(jq -r '.xiaomi.version' scrape_results.json)
 
-          echo "=========================================================="
-          echo "🚀 MEMPROSES: $MARKET_NAME ($VERSION)"
-          echo "🔗 URL: $ROM_URL"
-          echo "=========================================================="
+          echo "🚀 Processing: $MARKET_NAME"
 
-          # 1. Download & Extract
+          # Download
           aria2c -x 16 -s 16 -j 16 -k 1M -o rom.zip "$ROM_URL"
-          unzip rom.zip payload.bin && rm rom.zip
-          payload_dumper --partitions system,product,vendor,system_ext,boot,init_boot payload.bin && rm payload.bin
-
+          unzip rom.zip payload.bin || { echo "Bukan HyperOS/MIUI format payload.bin"; exit 1; }
+          
+          # Extract partitions
+          payload_dumper --partitions system,product,vendor,system_ext,boot,init_boot payload.bin
+          
           mkdir -p extracted
           for img in output/*.img; do
             name=$(basename "$img" .img)
             if [[ "$name" != "boot" && "$name" != "init_boot" ]]; then
                mkdir -p "extracted/$name"
+               # Menggunakan erofs-utils yang sudah terinstall via apt
                fsck.erofs --extract="extracted/$name" "$img" || 7z x "$img" -y -o"extracted/$name" || true
-               rm "$img"
             fi
           done
 
-          # 2. Generate PIF & Update Database
+          # Generate PIF
           find extracted/ -type f -name "*prop*" -exec strings {} + > all_props.txt
-
+          
           get_val() {
             grep -aE "(^|\.)$1=" all_props.txt | grep -viE "mainline|qssi|generic|qualcomm|missi|sdk" | head -n 1 | cut -d'=' -f2 | tr -d '\r' | xargs
           }
 
-          # Untuk Xiaomi, fingerprint kadang ada di ro.vendor.build.fingerprint atau ro.system.build.fingerprint
           FP=$(grep -a "fingerprint=" all_props.txt | grep -i "${{ github.event.inputs.codename }}" | head -n 1 | cut -d'=' -f2 | tr -d '\r' | xargs)
           ID=$(get_val "build.id")
           BRAND=$(get_val "product.brand")
-          MANUFACTURER=$(get_val "product.manufacturer")
           MODEL=$(get_val "product.model")
-          PRODUCT=$(get_val "product.name")
           PATCH=$(get_val "version.security_patch")
           REL=$(get_val "version.release")
-          INITIAL_SDK=$(get_val "product.first_api_level")
-
+          
+          # Logic SDK mapping
           SDK_INT="35"
-          [[ "$REL" == "14" ]] && SDK_INT="34"
-          [[ "$REL" == "13" ]] && SDK_INT="33"
-          [[ "$REL" == "12" ]] && SDK_INT="32"
-          [[ "$REL" == "11" ]] && SDK_INT="30"
-          [[ "$REL" == "15" ]] && SDK_INT="35"
-          [[ "$REL" == "16" ]] && SDK_INT="36"
+          case "$REL" in
+            "15") SDK_INT="35" ;;
+            "14") SDK_INT="34" ;;
+            "13") SDK_INT="33" ;;
+            "12") SDK_INT="31" ;;
+          esac
 
-          # Fallback if empty
-          if [ -z "$BRAND" ]; then BRAND="Xiaomi"; fi
-          if [ -z "$MANUFACTURER" ]; then MANUFACTURER="Xiaomi"; fi
-
+          # Save JSON
           DIR="database/xiaomi/${{ github.event.inputs.codename }}"
           mkdir -p "$DIR"
-
-          # Sanitize region for filename (lowercase, no spaces)
           REGION_CLEAN=$(echo "${{ github.event.inputs.region }}" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
           FILE_NAME="${{ github.event.inputs.codename }}_${REGION_CLEAN}.json"
 
-          jq -n \
-            --arg id "$ID" \
-            --arg brand "$BRAND" \
-            --arg device "${{ github.event.inputs.codename }}" \
-            --arg fp "$FP" \
-            --arg manu "$MANUFACTURER" \
-            --arg model "$MODEL" \
-            --arg prod "$PRODUCT" \
-            --arg patch "$PATCH" \
-            --arg initsdk "$INITIAL_SDK" \
-            --arg rel "$REL" \
-            --arg sdk "$SDK_INT" \
-            '{
-              "ID": $id,
-              "BRAND": $brand,
-              "DEVICE": $device,
-              "FINGERPRINT": $fp,
-              "MANUFACTURER": $manu,
-              "MODEL": $model,
-              "PRODUCT": $prod,
-              "SECURITY_PATCH": $patch,
-              "DEVICE_INITIAL_SDK_INT": $initsdk,
-              "RELEASE": $rel,
-              "SDK_INT": $sdk
-            }' > "$DIR/$FILE_NAME"
+          jq -n --arg id "$ID" --arg fp "$FP" --arg model "$MODEL" --arg patch "$PATCH" --arg rel "$REL" --arg sdk "$SDK_INT" \
+            '{ID: $id, BRAND: "Xiaomi", DEVICE: "${{ github.event.inputs.codename }}", FINGERPRINT: $fp, MANUFACTURER: "Xiaomi", MODEL: $model, PRODUCT: $model, SECURITY_PATCH: $patch, RELEASE: $rel, SDK_INT: $sdk}' \
+            > "$DIR/$FILE_NAME"
 
-          DB="database.json"
-          if [ ! -f "$DB" ]; then echo '{"devices":{"google":{},"xiaomi":{}}}' > "$DB"; fi
-          # Ensure xiaomi object exists
-          if ! jq -e '.devices.xiaomi' "$DB" > /dev/null; then
-            jq '.devices.xiaomi = {}' "$DB" > temp.json && mv temp.json "$DB"
-          fi
-
+          # Update database.json
           TIMESTAMP=$(date +'%d-%m-%Y %H:%M:%S')
-          PIF_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/$DIR/$FILE_NAME"
-          BOOT_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.codename }}-${REGION_CLEAN}/boot.img"
-          INIT_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.codename }}-${REGION_CLEAN}/init_boot.img"
+          jq --arg cn "${{ github.event.inputs.codename }}" --arg rg "$REGION_CLEAN" --arg m "$MODEL" --arg id "$ID" --arg p "$PATCH" --arg r "$REL" --arg s "$SDK_INT" --arg t "$TIMESTAMP" \
+             '.devices.xiaomi[$cn][$rg] = {status: "up_to_date", MODEL: $m, BUILD_ID: $id, RELEASE: $r, SDK_INT: $s, SECURITY_PATCH: $p, last_generated: $t}' \
+             database.json > temp.json && mv temp.json database.json
 
-          jq --arg codename "${{ github.event.inputs.codename }}" \
-             --arg region "$REGION_CLEAN" \
-             --arg model "$MODEL" \
-             --arg id "$ID" \
-             --arg patch "$PATCH" \
-             --arg rel "$REL" \
-             --arg sdk "$SDK_INT" \
-             --arg time "$TIMESTAMP" \
-             --arg pif "$PIF_URL" \
-             --arg boot "$BOOT_URL" \
-             --arg init "$INIT_URL" \
-             '.devices.xiaomi[$codename][$region] = {
-                "status": "up_to_date",
-                "MODEL": $model,
-                "BUILD_ID": $id,
-                "RELEASE": $rel,
-                "SDK_INT": $sdk,
-                "SECURITY_PATCH": $patch,
-                "last_generated": $time,
-                "pif_url": $pif,
-                "boot_img": $boot,
-                "init_boot_img": $init
-             }' "$DB" > temp.json && mv temp.json "$DB"
-
-          # 3. Upload Release
+          # Upload Release
           TAG="${{ github.event.inputs.codename }}-${REGION_CLEAN}"
-          printf -v NOTES "ID : %s\n%s" "$ID" "$MARKET_NAME"
-
-          if gh release view "$TAG"; then
-            gh release edit "$TAG" --notes "$NOTES"
-          else
-            gh release create "$TAG" --title "$MARKET_NAME | ${{ github.event.inputs.codename }} (${{ github.event.inputs.region }})" --notes "$NOTES"
-          fi
-
-          [ -f "output/boot.img" ] && gh release upload "$TAG" "output/boot.img#boot.img" --clobber
-          [ -f "output/init_boot.img" ] && gh release upload "$TAG" "output/init_boot.img#init_boot.img" --clobber
-
-          # 4. Cleanup
-          echo "🧹 Membersihkan sisa file..."
-          rm -rf extracted output rom.zip payload.bin all_props.txt erofs-utils-1.7.1* node_modules package* scrape_results.json
+          gh release create "$TAG" output/boot.img output/init_boot.img --title "$MARKET_NAME" --notes "Auto-generated PIF and Assets" --generate-notes || gh release edit "$TAG" --notes "Updated $TIMESTAMP"
 
       - name: 💾 Commit Changes
         run: |
           git config --global user.name "PIF-Bot"
           git config --global user.email "bot@github.com"
-          git add database/ database.json
-          git commit -m "Update Xiaomi ${{ github.event.inputs.codename }} ${{ github.event.inputs.region }} (Auto-Synced)" || true
+          git add .
+          git commit -m "Update Xiaomi ${{ github.event.inputs.codename }} ${{ github.event.inputs.region }}" || true
           git push origin main
