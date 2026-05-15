@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       codename:
-        description: 'Codename (contoh: sapphiren, marble, dll)'
+        description: 'Codename (contoh: sapphiren, marble, garnet)'
         required: true
         default: 'sapphiren'
       region:
-        description: 'Region (Global, Indonesia, EEA, China, India, Russia, Turkey, Taiwan)'
+        description: 'Region (Global, Indonesia, EEA, China, India)'
         required: true
         default: 'Global'
       rom_url:
@@ -30,8 +30,6 @@ jobs:
           fetch-depth: 0
 
       - name: 🧹 Deep Cleanup
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
           sudo apt-get clean
@@ -41,72 +39,62 @@ jobs:
           sudo apt update
           sudo apt install -y aria2 p7zip-full p7zip-rar python3-pip wget curl jq unzip erofs-utils
           pip3 install --break-system-packages payload-dumper
-          npm install yaml-js
+          npm install js-yaml
 
-      - name: 🎣 Scrape / Resolve Link
+      - name: 🎣 Scrape / Resolve Link (XiaomiFirmwareUpdater Official)
         id: scraper
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const yaml = require('yaml-js');
+            const yaml = require('js-yaml');
             const codename = '${{ github.event.inputs.codename }}'.toLowerCase();
             const regionInput = '${{ github.event.inputs.region }}'.toLowerCase();
             const rom_url = '${{ github.event.inputs.rom_url }}';
 
-            let results = {};
-
             if (rom_url) {
-              results['xiaomi'] = { title: `${codename.toUpperCase()} Manual`, version: 'Manual', link: rom_url };
+              const results = { xiaomi: { title: `${codename.toUpperCase()} Manual`, version: 'Manual', link: rom_url } };
               fs.writeFileSync('scrape_results.json', JSON.stringify(results));
               return;
             }
 
+            // Fetch official latest.yml
             const url = 'https://raw.githubusercontent.com/XiaomiFirmwareUpdater/miui-updates-tracker/master/data/latest.yml';
             const response = await fetch(url);
             const text = await response.text();
             const data = yaml.load(text);
 
-            // Mapping keyword untuk membantu pencarian region yang lebih akurat
-            const regionMap = {
-              'global': ['global'],
-              'indonesia': ['id', 'indonesia'],
-              'eea': ['eea', 'europe'],
-              'china': ['china'],
-              'india': ['india', 'in'],
-              'russia': ['russia', 'ru'],
-              'turkey': ['turkey', 'tr'],
-              'taiwan': ['taiwan', 'tw']
+            // Map untuk mencocokkan region input dengan field "name" di YAML
+            const regionKeywords = {
+              'global': ['global', 'international', ' mi '],
+              'indonesia': ['indonesia', ' id '],
+              'eea': ['eea', 'europe', ' eu '],
+              'china': ['china', ' cn '],
+              'india': ['india', ' in ']
             };
 
-            const keywords = regionMap[regionInput] || [regionInput];
+            const keywords = regionKeywords[regionInput] || [regionInput];
             let found = null;
 
             for (const item of data) {
+              // Cek codename dan pastikan method adalah recovery
               if (item.codename && item.codename.toLowerCase() === codename && 
                   item.method && item.method.toLowerCase() === 'recovery') {
                 
-                const itemName = item.name.toLowerCase();
-                // Cari apakah ada keyword region yang cocok di dalam nama produk
-                const match = keywords.some(k => itemName.includes(k));
-                
-                if (match) {
-                  found = {
-                    title: item.name,
-                    version: item.version,
-                    link: item.link
-                  };
-                  break;
+                const itemName = (item.name || "").toLowerCase();
+                // Jika keyword region cocok
+                if (keywords.some(k => itemName.includes(k))) {
+                  found = { title: item.name, version: item.version, link: item.link };
+                  break; 
                 }
               }
             }
 
             if (found) {
-              results['xiaomi'] = found;
-              fs.writeFileSync('scrape_results.json', JSON.stringify(results));
-              console.log("✅ Found ROM:", found.title);
+              fs.writeFileSync('scrape_results.json', JSON.stringify({ xiaomi: found }));
+              console.log("✅ Match Found:", found.title, found.link);
             } else {
-              core.setFailed(`❌ ROM tidak ditemukan untuk ${codename} dengan region keyword: ${keywords.join(', ')}`);
+              core.setFailed(`❌ Gagal menemukan ROM Recovery untuk ${codename} region ${regionInput}.`);
             }
 
       - name: ⚙️ Process ROM
@@ -122,7 +110,7 @@ jobs:
           aria2c -x 16 -s 16 -j 16 -k 1M -o rom.zip "$ROM_URL"
           
           echo "📦 Extracting Payload..."
-          unzip rom.zip payload.bin || { echo "Format ROM tidak didukung (bukan payload.bin)"; exit 1; }
+          unzip rom.zip payload.bin || { echo "Bukan format payload.bin"; exit 1; }
           payload_dumper --partitions system,product,vendor,system_ext,boot,init_boot payload.bin
           
           mkdir -p extracted
@@ -143,19 +131,15 @@ jobs:
 
           FP=$(grep -a "fingerprint=" all_props.txt | grep -i "${{ github.event.inputs.codename }}" | head -n 1 | cut -d'=' -f2 | tr -d '\r' | xargs)
           ID=$(get_val "build.id")
-          BRAND=$(get_val "product.brand")
           MODEL=$(get_val "product.model")
           PATCH=$(get_val "version.security_patch")
           REL=$(get_val "version.release")
           
-          # SDK Logic
           SDK_INT="35"
           [[ "$REL" == "14" ]] && SDK_INT="34"
-          [[ "$REL" == "13" ]] && SDK_INT="33"
           [[ "$REL" == "15" ]] && SDK_INT="35"
           [[ "$REL" == "16" ]] && SDK_INT="36"
 
-          # File Management
           DIR="database/xiaomi/${{ github.event.inputs.codename }}"
           mkdir -p "$DIR"
           REGION_CLEAN=$(echo "${{ github.event.inputs.region }}" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
@@ -165,7 +149,6 @@ jobs:
             '{ID: $id, BRAND: "Xiaomi", DEVICE: "${{ github.event.inputs.codename }}", FINGERPRINT: $fp, MANUFACTURER: "Xiaomi", MODEL: $model, PRODUCT: $model, SECURITY_PATCH: $patch, RELEASE: $rel, SDK_INT: $sdk}' \
             > "$DIR/$FILE_NAME"
 
-          # Update database.json (Cek file ada atau tidak)
           if [ ! -f database.json ]; then echo '{"devices":{"google":{},"xiaomi":{}}}' > database.json; fi
           
           TIMESTAMP=$(date +'%d-%m-%Y %H:%M:%S')
@@ -177,9 +160,8 @@ jobs:
              '.devices.xiaomi[$cn][$rg] = {status: "up_to_date", MODEL: $m, BUILD_ID: $id, RELEASE: $r, SDK_INT: $s, SECURITY_PATCH: $p, last_generated: $t, pif_url: $pif, boot_img: $boot, init_boot_img: $init}' \
              database.json > temp.json && mv temp.json database.json
 
-          # Release Assets
           TAG="${{ github.event.inputs.codename }}-${REGION_CLEAN}"
-          gh release create "$TAG" output/boot.img output/init_boot.img --title "$MARKET_NAME | ${{ github.event.inputs.codename }} ($REGION_CLEAN)" --notes "Update: $TIMESTAMP" --clobber || \
+          gh release create "$TAG" output/boot.img output/init_boot.img --title "$MARKET_NAME" --notes "Auto-Generated Assets - $TIMESTAMP" --clobber || \
           gh release upload "$TAG" output/boot.img output/init_boot.img --clobber
 
       - name: 💾 Commit Changes
