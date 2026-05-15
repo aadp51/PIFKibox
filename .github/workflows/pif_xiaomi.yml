@@ -47,9 +47,9 @@ jobs:
           sudo apt update
           sudo apt install -y aria2 p7zip-full p7zip-rar python3-pip wget curl jq unzip
           pip3 install --break-system-packages payload-dumper
-          wget https://github.com/erofs/erofs-utils/releases/download/v1.7.1/erofs-utils-1.7.1.tar.gz
-          tar -xzvf erofs-utils-1.7.1.tar.gz
-          cd erofs-utils-1.7.1
+          wget https://git.kernel.org/pub/scm/linux/kernel/git/xiang/erofs-utils.git/snapshot/erofs-utils-1.9.1.tar.gz
+          tar -xzvf erofs-utils-1.9.1.tar.gz
+          cd erofs-utils-1.9.1
           ./configure && make
           sudo make install
           cd ..
