@@ -59,12 +59,15 @@
     </p>
   </header>
 
-  <div class="flex bg-white/5 p-1 rounded-2xl border border-white/10 mb-8 w-full max-w-md">
-    <button id="tab-pif" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold uppercase transition-all duration-300 tab-active" onclick="switchTab('pif')">
-      <i data-lucide="database" class="w-4 h-4"></i> PIF Database
+  <div class="grid grid-cols-3 bg-white/5 p-1 rounded-2xl border border-white/10 mb-8 w-full max-w-2xl gap-1">
+    <button id="tab-pif" class="flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] sm:text-xs font-bold uppercase transition-all duration-300 tab-active" onclick="switchTab('pif')">
+      <i data-lucide="database" class="w-4 h-4"></i> PIF
     </button>
-    <button id="tab-keybox" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold uppercase transition-all duration-300 tab-inactive" onclick="switchTab('keybox')">
-      <i data-lucide="zap" class="w-4 h-4"></i> Keybox Forge
+    <button id="tab-keybox" class="flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] sm:text-xs font-bold uppercase transition-all duration-300 tab-inactive" onclick="switchTab('keybox')">
+      <i data-lucide="zap" class="w-4 h-4"></i> Keybox
+    </button>
+    <button id="tab-fixer" class="flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] sm:text-xs font-bold uppercase transition-all duration-300 tab-inactive" onclick="switchTab('fixer')">
+      <i data-lucide="wand-2" class="w-4 h-4"></i> Format Fixer
     </button>
   </div>
 
@@ -81,7 +84,7 @@
         <h2 class="text-[#00f2ff] text-sm font-extrabold uppercase flex items-center gap-2 mb-4">
           <i data-lucide="refresh-cw" class="w-4 h-4"></i> Auto-Retrieval
         </h2>
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <button id="btn-tricky" onclick="fetchKeybox('tricky')" class="btn-inactive py-3 px-2 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300">
             Tricky
           </button>
@@ -91,6 +94,12 @@
           <button id="btn-integrity" onclick="fetchKeybox('integrity')" class="btn-inactive py-3 px-2 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300">
             Integrity
           </button>
+          <button id="btn-evox" onclick="fetchKeybox('evox')" class="btn-inactive py-3 px-2 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300">
+            EvoX
+          </button>
+          <button id="btn-kowx" onclick="fetchKeybox('kowx')" class="btn-inactive py-3 px-2 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300">
+            KOWX
+          </button>
         </div>
       </div>
 
@@ -99,6 +108,72 @@
         <a id="download-link" href="#" download="" class="w-full max-w-sm flex items-center justify-center gap-2 py-3 bg-[#00f2ff] text-black rounded-xl text-sm font-black uppercase tracking-widest shadow-[0_0_15px_rgba(0,242,255,0.3)] hover:scale-105 transition-all duration-300">
           <i data-lucide="download" class="w-4 h-4"></i> <span id="download-name">DOWNLOAD.XML</span>
         </a>
+      </div>
+    </div>
+
+    <div id="content-fixer" class="space-y-6 hidden">
+      <div class="bg-white/5 border border-[#00f2ff]/10 backdrop-blur-md rounded-2xl p-6 shadow-lg space-y-4">
+        <h2 class="text-[#00f2ff] text-sm font-extrabold uppercase flex items-center gap-2">
+          <i data-lucide="wand-2" class="w-4 h-4"></i> Keybox Format Fixer
+        </h2>
+        <p class="text-xs text-[#6272a4] leading-relaxed">
+          Paste / upload / fetch keybox, lalu tool ini bikin ulang format PEM ala Yurikey: isi key & cert polos tanpa indent, chain tetap 3 certificate, dan bisa langsung copy full XML.
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <select id="fix-source" class="sm:col-span-2 bg-black/30 border border-white/10 rounded-xl px-3 py-3 text-xs font-bold text-white outline-none focus:border-[#00f2ff]">
+            <option value="tricky">Fetch Tricky GitHub</option>
+            <option value="kowx">Fetch KOWX Direct</option>
+            <option value="yurikey">Fetch Yurikey</option>
+            <option value="evox">Fetch EvoX</option>
+            <option value="integrity">Fetch Integrity</option>
+          </select>
+          <button onclick="fetchAndFix()" class="py-3 px-3 rounded-xl border border-[#00f2ff] text-[#00f2ff] text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-[#00f2ff] hover:text-black transition-all">
+            Fetch & Fix
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label class="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider hover:border-[#00f2ff] hover:text-[#00f2ff] cursor-pointer transition-all">
+            <i data-lucide="upload" class="w-4 h-4"></i> Upload XML
+            <input id="fix-file" type="file" accept=".xml,text/xml" class="hidden" onchange="loadFixFile(event)">
+          </label>
+          <button onclick="fixFromTextarea()" class="py-3 rounded-xl border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider hover:border-[#00f2ff] hover:text-[#00f2ff] transition-all">
+            Fix Paste
+          </button>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-3">
+            <label class="text-[10px] text-[#6272a4] font-black uppercase tracking-widest">Input Keybox</label>
+            <button onclick="clearFixer()" class="text-[10px] text-[#ff6b6b] font-bold uppercase">Clear</button>
+          </div>
+          <textarea id="fix-input" spellcheck="false" placeholder="Paste keybox.xml di sini..." class="w-full min-h-[220px] bg-black/40 border border-white/10 rounded-xl p-3 text-[11px] font-mono text-white outline-none focus:border-[#00f2ff]"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <input id="fix-comment" value="https://t.me/yuriiroot" placeholder="Comment PEM optional" class="sm:col-span-2 bg-black/30 border border-white/10 rounded-xl px-3 py-3 text-xs font-bold text-white outline-none focus:border-[#00f2ff]">
+          <label class="flex items-center justify-center gap-2 bg-black/30 border border-white/10 rounded-xl px-3 py-3 text-[10px] font-bold uppercase text-[#6272a4]">
+            <input id="fix-add-comment" type="checkbox" checked class="accent-[#00f2ff]"> Add Comment
+          </label>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-3">
+            <label class="text-[10px] text-[#6272a4] font-black uppercase tracking-widest">Output Fixed XML</label>
+            <span id="fix-status" class="text-[10px] text-[#6272a4] font-bold uppercase"></span>
+          </div>
+          <textarea id="fix-output" spellcheck="false" readonly placeholder="Output bakal muncul di sini..." class="w-full min-h-[260px] bg-black/40 border border-[#00f2ff]/20 rounded-xl p-3 text-[11px] font-mono text-white outline-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button onclick="copyFixedXml()" class="flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:border-[#00f2ff] hover:text-[#00f2ff] transition-all">
+            <i data-lucide="copy" class="w-4 h-4"></i> Copy Full XML
+          </button>
+          <button onclick="downloadFixedXml()" class="flex items-center justify-center gap-2 py-3 bg-[#00f2ff] text-black rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-[0_0_15px_rgba(0,242,255,0.3)] hover:scale-105 transition-all">
+            <i data-lucide="download" class="w-4 h-4"></i> Download Fixed
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -129,9 +204,11 @@
     };
 
     const sources = {
-      tricky: { r:'KOWX712/Tricky-Addon-Update-Target-List', b: 'keybox', p:'.extra', u: 'https://raw.githubusercontent.com/KOWX712/Tricky-Addon-Update-Target-List/refs/heads/keybox/.extra', n: 'tricky_addon.xml' },
-      yurikey: { r:'Yurii0307/yurikey', b: 'main', p:'key', u: 'https://raw.githubusercontent.com/Yurii0307/yurikey/main/key', n: 'yurikey.xml' },
-      integrity: { r:'MeowDump/MeowDump', b: 'main', p:'NullVoid/OptimusPrime', u: 'https://raw.githubusercontent.com/MeowDump/MeowDump/main/NullVoid/OptimusPrime', n: 'integritybox.xml' }
+      tricky: { r:'KOWX712/Tricky-Addon-Update-Target-List', b: 'keybox', p:'.extra', u: 'https://raw.githubusercontent.com/KOWX712/Tricky-Addon-Update-Target-List/refs/heads/keybox/.extra', n: 'tricky_addon.xml', mode: 'tricky' },
+      kowx: { r:'KOWX712/Tricky-Addon-Update-Target-List', b: 'keybox', p:'.extra', u: 'https://keybox.kowx712.cc', n: 'kowx_keybox.xml', mode: 'auto' },
+      yurikey: { r:'Yurii0307/yurikey', b: 'main', p:'key', u: 'https://raw.githubusercontent.com/Yurii0307/yurikey/main/key', n: 'yurikey.xml', mode: 'yurikey' },
+      evox: { r:null, b: null, p:null, u: 'https://git.evolution-x.org/EvoX/keybox/raw/branch/main/keybox.xml', n: 'evox_keybox.xml', mode: 'plain' },
+      integrity: { r:'MeowDump/MeowDump', b: 'main', p:'NullVoid/OptimusPrime', u: 'https://raw.githubusercontent.com/MeowDump/MeowDump/main/NullVoid/OptimusPrime', n: 'integritybox.xml', mode: 'integrity' }
     };
 
     async function getUpdateInfo(repo, path, branch) {
@@ -185,11 +262,10 @@
 
     // Tab Switching
     function switchTab(tab) {
-      document.getElementById('tab-pif').className = `flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold uppercase transition-all duration-300 ${tab === 'pif' ? 'tab-active' : 'tab-inactive'}`;
-      document.getElementById('tab-keybox').className = `flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold uppercase transition-all duration-300 ${tab === 'keybox' ? 'tab-active' : 'tab-inactive'}`;
-      
-      document.getElementById('content-pif').classList.toggle('hidden', tab !== 'pif');
-      document.getElementById('content-keybox').classList.toggle('hidden', tab !== 'keybox');
+      ['pif', 'keybox', 'fixer'].forEach(t => {
+        document.getElementById(`tab-${t}`).className = `flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] sm:text-xs font-bold uppercase transition-all duration-300 ${tab === t ? 'tab-active' : 'tab-inactive'}`;
+        document.getElementById(`content-${t}`).classList.toggle('hidden', tab !== t);
+      });
     }
 
     // Fetch Database
@@ -288,68 +364,13 @@
       lucide.createIcons();
     }
 
-    // Fetch Keybox
-    async function fetchKeybox(type) {
-      // Reset buttons
-      ['tricky', 'yurikey', 'integrity'].forEach(t => {
-        document.getElementById(`btn-${t}`).className = `py-3 px-2 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300 ${t === type ? 'btn-active' : 'btn-inactive'}`;
-      });
+    // Keybox Decode + Download
+    function decodeKeyboxRaw(type, raw) {
+      let final = '';
+      const mode = sources[type]?.mode || type;
+      const trimmed = raw.trim();
 
-      const dlSection = document.getElementById('download-section');
-      const statusMsg = document.getElementById('status-msg');
-      const dlLink = document.getElementById('download-link');
-      const dlName = document.getElementById('download-name');
-      
-      dlSection.classList.remove('hidden');
-      statusMsg.innerHTML = '<span class="animate-pulse">FETCHING...</span>';
-      dlLink.classList.add('hidden');
-
-      try {
-        const source = sources[type];
-        const res = await fetch(source.u);
-        if (!res.ok) throw new Error('Failed to fetch');
-        let raw = await res.text();
-        let final = '';
-        
-        const lastUpdate = await getUpdateInfo(source.r, source.p, source.b);
-        
-        if (type === 'tricky') {
-          final = atob(hex(raw.replace(/\s+/g, '')));
-        } else if (type === 'yurikey') {
-          // Filter Badak: Buang semua karakter non-base64 biar gak zonk
-          final = atob(raw.trim().replace(/[^A-Za-z0-9+/=]/g, ""));
-        } else if (type === 'integrity') {
-          let d = raw.trim();
-          for (let i = 0; i < 10; i++) {
-            d = atob(d.replace(/\s/g, ''));
-          }
-          final = rot(hex(d));
-          ["every", "soul", "will", "taste", "death"].forEach(w => {
-            final = final.split(w).join("");
-          });
-        }
-        
-        final = final.split('algorithm="@Yurii0307"').join('algorithm="rsa"');
-        final = final.replace(/\n\s*\n/g, "\n");
-        
-        const blob = new Blob([final], { type: 'text/xml' });
-        const url = URL.createObjectURL(blob);
-        
-        dlLink.href = url;
-        dlLink.download = source.n;
-        dlName.innerText = source.n;
-        
-        // Tampilkan Last Update
-        statusMsg.innerHTML = `SOURCE UPDATE: <strong class="text-[#00f2ff]">${lastUpdate}</strong>`;
-        dlLink.classList.remove('hidden');
-      } catch (e) {
-        console.error(e);
-        statusMsg.innerHTML = '<span class="text-[#ff6b6b] font-bold">X FETCH FAILED X</span>';
-      }
-    }
-
-    // Init
-    loadDatabase();
-  </script>
-</body>
-</html>
+      if (mode === 'plain' || trimmed.startsWith('<?xml') || trimmed.includes('<AndroidAttestation')) {
+        final = raw;
+      } else if (mode === 'tricky') {
+        final = atob(hex(raw.repla
