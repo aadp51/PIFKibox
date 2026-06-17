@@ -370,7 +370,201 @@
       const mode = sources[type]?.mode || type;
       const trimmed = raw.trim();
 
+      if (!trimmed) throw new Error('Response kosong');
+
       if (mode === 'plain' || trimmed.startsWith('<?xml') || trimmed.includes('<AndroidAttestation')) {
         final = raw;
       } else if (mode === 'tricky') {
-        final = atob(hex(raw.repla
+        final = atob(hex(raw.replace(/\s+/g, '')));
+      } else if (mode === 'yurikey') {
+        final = rot(atob(trimmed));
+      } else if (mode === 'integrity') {
+        final = atob(trimmed);
+      } else if (mode === 'auto') {
+        final = extractKeyboxFromKowx(raw);
+      } else {
+        final = raw;
+      }
+
+      if (!final.includes('<AndroidAttestation')) {
+        throw new Error('Keybox XML tidak ditemukan di response');
+      }
+      return final.trim();
+    }
+
+    function extractKeyboxFromKowx(raw) {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith('<?xml') || trimmed.includes('<AndroidAttestation')) return raw;
+
+      try {
+        const payload = JSON.parse(trimmed);
+        const candidates = [
+          payload.keybox,
+          payload.xml,
+          payload.content,
+          payload.data,
+          payload.result,
+          payload?.data?.keybox,
+          payload?.data?.xml,
+          payload?.data?.content,
+          ...(Array.isArray(payload) ? payload.map(item => item.keybox || item.xml || item.content || item.download_url || item.url) : [])
+        ].filter(Boolean);
+
+        for (const candidate of candidates) {
+          if (typeof candidate === 'string') {
+            if (candidate.includes('<AndroidAttestation')) return candidate;
+            if (/^https?:\/\//.test(candidate)) continue;
+            try {
+              const decoded = atob(candidate.replace(/\s+/g, ''));
+              if (decoded.includes('<AndroidAttestation')) return decoded;
+            } catch {}
+          }
+        }
+      } catch {}
+
+      const doc = new DOMParser().parseFromString(raw, 'text/html');
+      const downloadLink = [...doc.querySelectorAll('a[href], button[data-url], [data-download-url]')]
+        .map(el => el.getAttribute('href') || el.dataset.url || el.dataset.downloadUrl)
+        .find(value => value && (/download|keybox|\.xml/i.test(value)));
+      if (downloadLink) {
+        throw new Error(`KOWX butuh endpoint download langsung: ${new URL(downloadLink, sources.kowx.u).href}`);
+      }
+
+      throw new Error('Format KOWX belum dikenali');
+    }
+
+    async function fetchTextWithFallback(source) {
+      const urls = [source.u, ...(source.fallbacks || [])];
+      let lastError;
+      for (const url of urls) {
+        try {
+          const res = await fetch(url, { cache: 'no-store' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.text();
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      throw lastError || new Error('Fetch gagal');
+    }
+
+    async function fetchKeybox(type) {
+      const source = sources[type];
+      if (!source) return;
+
+      Object.keys(sources).forEach(key => {
+        const btn = document.getElementById(`btn-${key}`);
+        if (btn) btn.className = btn.className.replace('btn-active', 'btn-inactive');
+      });
+      const activeBtn = document.getElementById(`btn-${type}`);
+      if (activeBtn) activeBtn.className = activeBtn.className.replace('btn-inactive', 'btn-active');
+
+      const section = document.getElementById('download-section');
+      const status = document.getElementById('status-msg');
+      const link = document.getElementById('download-link');
+      const name = document.getElementById('download-name');
+      section.classList.remove('hidden');
+      status.innerText = `FETCHING ${type.toUpperCase()}...`;
+      link.classList.add('pointer-events-none', 'opacity-50');
+
+      try {
+        const raw = await fetchTextWithFallback(source);
+        const xml = decodeKeyboxRaw(type, raw);
+        const blob = new Blob([xml], { type: 'text/xml' });
+        const blobUrl = URL.createObjectURL(blob);
+        link.href = blobUrl;
+        link.download = source.n;
+        name.innerText = source.n.toUpperCase();
+        status.innerText = source.r ? `${type.toUpperCase()} • ${await getUpdateInfo(source.r, source.p, source.b)}` : `${type.toUpperCase()} READY`;
+        link.classList.remove('pointer-events-none', 'opacity-50');
+      } catch (err) {
+        status.innerText = `GAGAL: ${err.message}`;
+      }
+    }
+
+    async function fetchAndFix() {
+      const type = document.getElementById('fix-source').value;
+      const status = document.getElementById('fix-status');
+      status.innerText = 'Fetching...';
+      try {
+        const raw = await fetchTextWithFallback(sources[type]);
+        document.getElementById('fix-input').value = decodeKeyboxRaw(type, raw);
+        fixFromTextarea();
+      } catch (err) {
+        status.innerText = `Gagal: ${err.message}`;
+      }
+    }
+
+    function loadFixFile(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.getElementById('fix-input').value = reader.result;
+        fixFromTextarea();
+      };
+      reader.readAsText(file);
+    }
+
+    function normalizePemBlock(text) {
+      return text
+        .replace(/-----BEGIN ([^-]+)-----\s*/g, '-----BEGIN $1-----\n')
+        .replace(/\s*-----END ([^-]+)-----/g, '\n-----END $1-----')
+        .replace(/-----BEGIN ([^-]+)-----\n([\s\S]*?)\n-----END \1-----/g, (_, label, body) => {
+          const compact = body.replace(/\s+/g, '');
+          const lines = compact.match(/.{1,64}/g) || [];
+          return `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`;
+        });
+    }
+
+    function fixFromTextarea() {
+      const input = document.getElementById('fix-input').value.trim();
+      const output = document.getElementById('fix-output');
+      const status = document.getElementById('fix-status');
+      if (!input) {
+        status.innerText = 'Input kosong';
+        return;
+      }
+
+      const addComment = document.getElementById('fix-add-comment').checked;
+      const comment = document.getElementById('fix-comment').value.trim();
+      let fixed = normalizePemBlock(input);
+      fixed = fixed.replace(/>\s+</g, '>\n<');
+      if (addComment && comment) {
+        fixed = fixed.replace(/(<PrivateKey format="pem">\s*)/g, `$1\n<!-- ${comment.replace(/--/g, '—')} -->\n`);
+      }
+      output.value = fixed;
+      status.innerText = 'Fixed';
+    }
+
+    async function copyFixedXml() {
+      const output = document.getElementById('fix-output').value;
+      if (!output) return;
+      await navigator.clipboard.writeText(output);
+      document.getElementById('fix-status').innerText = 'Copied';
+    }
+
+    function downloadFixedXml() {
+      const output = document.getElementById('fix-output').value;
+      if (!output) return;
+      const blob = new Blob([output], { type: 'text/xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fixed_keybox.xml';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function clearFixer() {
+      document.getElementById('fix-input').value = '';
+      document.getElementById('fix-output').value = '';
+      document.getElementById('fix-status').innerText = '';
+    }
+
+    loadDatabase();
+  </script>
+</body>
+</html>
