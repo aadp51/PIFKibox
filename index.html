@@ -205,9 +205,9 @@
 
     const sources = {
       tricky: { r:'KOWX712/Tricky-Addon-Update-Target-List', b: 'keybox', p:'.extra', u: 'https://raw.githubusercontent.com/KOWX712/Tricky-Addon-Update-Target-List/refs/heads/keybox/.extra', n: 'tricky_addon.xml', mode: 'tricky' },
-      kowx: { r:'KOWX712/Tricky-Addon-Update-Target-List', b: 'keybox', p:'.extra', u: 'https://keybox.kowx712.cc', n: 'kowx_keybox.xml', mode: 'auto' },
+      kowx: { r:null, b: null, p:null, u: 'https://keybox.kowx712.cc/', n: 'kowx_keybox.xml', mode: 'auto', proxy: true },
       yurikey: { r:'Yurii0307/yurikey', b: 'main', p:'key', u: 'https://raw.githubusercontent.com/Yurii0307/yurikey/main/key', n: 'yurikey.xml', mode: 'yurikey' },
-      evox: { r:null, b: null, p:null, u: 'https://git.evolution-x.org/EvoX/keybox/raw/branch/main/keybox.xml', n: 'evox_keybox.xml', mode: 'plain' },
+      evox: { r:null, b: null, p:null, u: 'https://git.evolution-x.org/EvoX/keybox/raw/branch/main/keybox.xml', n: 'evox_keybox.xml', mode: 'plain', proxy: true },
       integrity: { r:'MeowDump/MeowDump', b: 'main', p:'NullVoid/OptimusPrime', u: 'https://raw.githubusercontent.com/MeowDump/MeowDump/main/NullVoid/OptimusPrime', n: 'integritybox.xml', mode: 'integrity' }
     };
 
@@ -365,10 +365,235 @@
     }
 
     // Keybox Decode + Download
+    const keyboxMarkers = ['<AndroidAttestation', '<AndroidAttestationKeybox', '<Keybox'];
+    const looksLikeKeybox = value => keyboxMarkers.some(marker => value.includes(marker));
+    const cleanBase64 = value => value.replace(/\s+/g, '');
+
+    function safeAtob(value) {
+      try {
+        return atob(cleanBase64(value));
+      } catch {
+        return '';
+      }
+    }
+
+    function decodeTrickyPayload(raw) {
+      const compact = raw.replace(/\s+/g, '');
+      const hexDecoded = /^[0-9a-f]+$/i.test(compact) ? hex(compact) : '';
+      const candidates = [
+        hexDecoded ? safeAtob(hexDecoded) : '',
+        hexDecoded,
+        safeAtob(compact),
+        raw
+      ];
+      return candidates.find(looksLikeKeybox) || candidates.find(Boolean) || raw;
+    }
+
     function decodeKeyboxRaw(type, raw) {
-      let final = '';
       const mode = sources[type]?.mode || type;
       const trimmed = raw.trim();
+      if (!trimmed) throw new Error('Response kosong');
+
+      if (mode === 'plain' || looksLikeKeybox(trimmed)) return raw.trim();
+      if (mode === 'tricky') return decodeTrickyPayload(raw).trim();
+
+      if (mode === 'yurikey') {
+        const decoded = safeAtob(trimmed);
+        const rotated = decoded ? rot(decoded) : '';
+        return (looksLikeKeybox(rotated) ? rotated : (looksLikeKeybox(decoded) ? decoded : raw)).trim();
+      }
+
+      if (mode === 'integrity') {
+        const decoded = safeAtob(trimmed);
+        return (looksLikeKeybox(decoded) ? decoded : raw).trim();
+      }
+
+      if (mode === 'auto') return extractKeyboxFromKowx(raw).trim();
+      return raw.trim();
+    }
+
+    function collectPayloadCandidates(payload) {
+      if (!payload) return [];
+      if (typeof payload === 'string') return [payload];
+      if (Array.isArray(payload)) return payload.flatMap(collectPayloadCandidates);
+      if (typeof payload !== 'object') return [];
+
+      const preferredKeys = ['keybox', 'xml', 'content', 'data', 'result', 'payload', 'raw', 'body', 'file', 'download_url', 'url'];
+      return [
+        ...preferredKeys.flatMap(key => collectPayloadCandidates(payload[key])),
+        ...Object.values(payload).flatMap(collectPayloadCandidates)
+      ];
+    }
+
+    function extractKeyboxFromKowx(raw) {
+      const trimmed = raw.trim();
+      if (looksLikeKeybox(trimmed)) return raw;
+
+      try {
+        const payload = JSON.parse(trimmed);
+        for (const candidate of collectPayloadCandidates(payload)) {
+          if (!candidate || typeof candidate !== 'string' || /^https?:\/\//.test(candidate)) continue;
+          if (looksLikeKeybox(candidate)) return candidate;
+          const decoded = safeAtob(candidate);
+          if (looksLikeKeybox(decoded)) return decoded;
+        }
+      } catch {}
+
+      const doc = new DOMParser().parseFromString(raw, 'text/html');
+      const htmlCandidates = [
+        ...[...doc.querySelectorAll('textarea, pre, code, script[type="application/json"]')].map(el => el.textContent || ''),
+        ...[...doc.querySelectorAll('[data-keybox], [data-xml], [data-content]')].map(el => el.dataset.keybox || el.dataset.xml || el.dataset.content || '')
+      ];
+
+      for (const candidate of htmlCandidates) {
+        if (looksLikeKeybox(candidate)) return candidate;
+        const decoded = safeAtob(candidate);
+        if (looksLikeKeybox(decoded)) return decoded;
+      }
+
+      return raw;
+    }
+
+    function buildFetchUrls(source) {
+      const urls = [source.u, ...(source.fallbacks || [])];
+      if (source.proxy) {
+        urls.push(...urls.map(url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`));
+      }
+      return [...new Set(urls)];
+    }
+
+    async function fetchTextWithFallback(source) {
+      let lastError;
+      for (const url of buildFetchUrls(source)) {
+        try {
+          const res = await fetch(url, { cache: 'no-store' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const text = await res.text();
+          if (text.trim()) return text;
+          throw new Error('Response kosong');
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      throw lastError || new Error('Fetch gagal');
+    }
+
+    async function fetchKeybox(type) {
+      const source = sources[type];
+      if (!source) return;
+
+      Object.keys(sources).forEach(key => {
+        const btn = document.getElementById(`btn-${key}`);
+        if (btn) btn.className = btn.className.replace('btn-active', 'btn-inactive');
+      });
+      const activeBtn = document.getElementById(`btn-${type}`);
+      if (activeBtn) activeBtn.className = activeBtn.className.replace('btn-inactive', 'btn-active');
+
+      const section = document.getElementById('download-section');
+      const status = document.getElementById('status-msg');
+      const link = document.getElementById('download-link');
+      const name = document.getElementById('download-name');
+      section.classList.remove('hidden');
+      status.innerText = `FETCHING ${type.toUpperCase()}...`;
+      link.classList.add('pointer-events-none', 'opacity-50');
+      link.removeAttribute('href');
+
+      try {
+        const raw = await fetchTextWithFallback(source);
+        const xml = decodeKeyboxRaw(type, raw);
+        const blob = new Blob([xml], { type: 'text/xml' });
+        const blobUrl = URL.createObjectURL(blob);
+        link.href = blobUrl;
+        link.download = source.n;
+        name.innerText = source.n.toUpperCase();
+        status.innerText = source.r ? `${type.toUpperCase()} • ${await getUpdateInfo(source.r, source.p, source.b)}` : `${type.toUpperCase()} READY`;
+        link.classList.remove('pointer-events-none', 'opacity-50');
+      } catch (err) {
+        status.innerText = `GAGAL FETCH ${type.toUpperCase()}: ${err.message}`;
+      }
+    }
+
+    async function fetchAndFix() {
+      const type = document.getElementById('fix-source').value;
+      const status = document.getElementById('fix-status');
+      status.innerText = 'Fetching...';
+      try {
+        const raw = await fetchTextWithFallback(sources[type]);
+        document.getElementById('fix-input').value = decodeKeyboxRaw(type, raw);
+        fixFromTextarea();
+      } catch (err) {
+        status.innerText = `Gagal: ${err.message}`;
+      }
+    }
+
+    function loadFixFile(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.getElementById('fix-input').value = reader.result;
+        fixFromTextarea();
+      };
+      reader.readAsText(file);
+    }
+
+    function normalizePemBlock(text) {
+      return text
+        .replace(/-----BEGIN ([^-]+)-----\s*/g, '-----BEGIN $1-----\n')
+        .replace(/\s*-----END ([^-]+)-----/g, '\n-----END $1-----')
+        .replace(/-----BEGIN ([^-]+)-----\n([\s\S]*?)\n-----END \1-----/g, (_, label, body) => {
+          const compact = body.replace(/\s+/g, '');
+          const lines = compact.match(/.{1,64}/g) || [];
+          return `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`;
+        });
+    }
+
+    function fixFromTextarea() {
+      const input = document.getElementById('fix-input').value.trim();
+      const output = document.getElementById('fix-output');
+      const status = document.getElementById('fix-status');
+      if (!input) {
+        status.innerText = 'Input kosong';
+        return;
+      }
+
+      const addComment = document.getElementById('fix-add-comment').checked;
+      const comment = document.getElementById('fix-comment').value.trim();
+      let fixed = normalizePemBlock(input);
+      fixed = fixed.replace(/>\s+</g, '>\n<');
+      if (addComment && comment) {
+        fixed = fixed.replace(/(<PrivateKey format="pem">\s*)/g, `$1\n<!-- ${comment.replace(/--/g, '—')} -->\n`);
+      }
+      output.value = fixed;
+      status.innerText = 'Fixed';
+    }
+
+    async function copyFixedXml() {
+      const output = document.getElementById('fix-output').value;
+      if (!output) return;
+      await navigator.clipboard.writeText(output);
+      document.getElementById('fix-status').innerText = 'Copied';
+    }
+
+    function downloadFixedXml() {
+      const output = document.getElementById('fix-output').value;
+      if (!output) return;
+      const blob = new Blob([output], { type: 'text/xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fixed_keybox.xml';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function clearFixer() {
+      document.getElementById('fix-input').value = '';
+      document.getElementById('fix-output').value = '';
+      document.getElementById('fix-status').innerText = '';
+    }
 
       if (!trimmed) throw new Error('Response kosong');
 
