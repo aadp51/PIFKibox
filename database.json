@@ -78,6 +78,32 @@
           "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/komodo-beta/boot.img",
           "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/komodo-beta/init_boot.img"
         }
+      },
+      "mustang": {
+        "stable": {
+          "status": "up_to_date",
+          "MODEL": "Pixel 10 Pro XL",
+          "BUILD_ID": "CP2A.260605.012.C1",
+          "RELEASE": "17",
+          "SDK_INT": "35",
+          "SECURITY_PATCH": "2026-06-05",
+          "last_generated": "26-06-2026 09:41:45",
+          "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/mustang/mustang_stable.json",
+          "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/mustang-stable/boot.img",
+          "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/mustang-stable/init_boot.img"
+        },
+        "beta": {
+          "status": "up_to_date",
+          "MODEL": "Pixel 10 Pro XL",
+          "BUILD_ID": "CP21.260330.011",
+          "RELEASE": "17",
+          "SDK_INT": "35",
+          "SECURITY_PATCH": "2026-05-05",
+          "last_generated": "26-06-2026 09:44:36",
+          "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/mustang/mustang_beta.json",
+          "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/mustang-beta/boot.img",
+          "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/mustang-beta/init_boot.img"
+        }
       }
     }
   }
