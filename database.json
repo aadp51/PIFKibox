@@ -104,6 +104,20 @@
           "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/mustang-beta/boot.img",
           "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/mustang-beta/init_boot.img"
         }
+      },
+      "mustang_beta": {
+        "beta": {
+          "status": "up_to_date",
+          "MODEL": "Pixel 10 Pro XL",
+          "BUILD_ID": "CP21.260330.011",
+          "RELEASE": "17",
+          "SDK_INT": "35",
+          "SECURITY_PATCH": "2026-05-05",
+          "last_generated": "26-10-2026 14:58:22",
+          "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/mustang_beta/mustang_beta_beta.json",
+          "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/mustang_beta-beta/boot.img",
+          "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/mustang_beta-beta/init_boot.img"
+        }
       }
     }
   }
