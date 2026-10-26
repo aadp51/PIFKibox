@@ -83,11 +83,11 @@
         "stable": {
           "status": "up_to_date",
           "MODEL": "Pixel 10 Pro XL",
-          "BUILD_ID": "CP2A.260705.006.A1",
+          "BUILD_ID": "CP3A.261005.005",
           "RELEASE": "17",
           "SDK_INT": "35",
-          "SECURITY_PATCH": "2026-07-05",
-          "last_generated": "13-07-2026 10:34:43",
+          "SECURITY_PATCH": "2026-10-05",
+          "last_generated": "26-10-2026 14:50:32",
           "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/mustang/mustang_stable.json",
           "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/mustang-stable/boot.img",
           "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/mustang-stable/init_boot.img"
@@ -99,7 +99,7 @@
           "RELEASE": "17",
           "SDK_INT": "35",
           "SECURITY_PATCH": "2026-05-05",
-          "last_generated": "13-07-2026 10:38:12",
+          "last_generated": "26-10-2026 14:52:45",
           "pif_url": "https://raw.githubusercontent.com/aadp51/PIFKibox/main/database/google/mustang/mustang_beta.json",
           "boot_img": "https://github.com/aadp51/PIFKibox/releases/download/mustang-beta/boot.img",
           "init_boot_img": "https://github.com/aadp51/PIFKibox/releases/download/mustang-beta/init_boot.img"
